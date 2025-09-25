@@ -14,6 +14,4 @@ const connectDB = async () => {
   }
 };
 
-connectDB(); // direct connect on import
-
 module.exports = connectDB;

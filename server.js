@@ -1,12 +1,15 @@
 const express = require("express");
 const app = express();
 require("dotenv").config();
-require("./config"); // MongoDB connection
+const connectDB = require("./config"); // MongoDB connection function
 const path = require("path");
 const cors = require("cors");
 const bodyParser = require("body-parser");
-const productRoutes = require("./routes/products");
-const categoryRoutes = require("./routes/categories");
+
+// -------------------------
+// Connect DB
+// -------------------------
+connectDB();
 
 // -------------------------
 // CORS - must come BEFORE routes
@@ -41,7 +44,6 @@ app.use("/api/cart", require("./routes/cartRoutes"));
 // app.use("/api/webhook", require("./routes/stripe-webhook"));
 app.use("/api/users", require("./routes/userRoutes"));
 
-
 // -------------------------
 // Root route (for testing)
 // -------------------------
@@ -50,14 +52,7 @@ app.get("/", (req, res) => {
 });
 
 // -------------------------
-// Start server
+// No app.listen in Vercel
 // -------------------------
-
-// const PORT = process.env.PORT || 4500;
-// app.listen(PORT, () => {
-//   console.log(`✅ Server running at http://localhost:${PORT}`);
-// });
-
-
-// dont use app.listen in vercel
-module.exports = app
+module.exports = app;
+// server/config.js
