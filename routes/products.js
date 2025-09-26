@@ -6,18 +6,13 @@ const Subcategory = require("../models/Subcategory");
 const { protect, adminOnly } = require("../middleware/authMiddleware");
 
 const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
 const slugify = require("slugify");
 const mongoose = require("mongoose");
+const cloudinary = require("../utils/cloudinary"); // ✅ new import
+const streamifier = require("streamifier"); // ✅ for buffer upload
 
-// Multer storage setup
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
-  filename: (req, file, cb) =>
-    cb(null, Date.now() + path.extname(file.originalname)),
-});
-
+// Multer: memory storage (buffer only, no local files)
+const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 // =========================
@@ -38,6 +33,22 @@ async function resolveCategoryFields(body) {
 }
 
 // =========================
+// 📌 Upload to Cloudinary helper
+// =========================
+function uploadToCloudinary(fileBuffer, folder = "products") {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { folder },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result.secure_url);
+      }
+    );
+    streamifier.createReadStream(fileBuffer).pipe(uploadStream);
+  });
+}
+
+// =========================
 // 📌 Create product (Admin)
 // =========================
 router.post("/", protect, adminOnly, upload.single("image"), async (req, res) => {
@@ -48,8 +59,12 @@ router.post("/", protect, adminOnly, upload.single("image"), async (req, res) =>
     if (!body.subcategory) delete body.subcategory;
 
     const { title, price, stock, category, subcategory } = body;
-
     const slug = slugify(title, { lower: true, strict: true });
+
+    let imageUrl = null;
+    if (req.file) {
+      imageUrl = await uploadToCloudinary(req.file.buffer);
+    }
 
     const product = new Product({
       title,
@@ -60,12 +75,13 @@ router.post("/", protect, adminOnly, upload.single("image"), async (req, res) =>
       subcategory,
       description: body.description,
       status: body.status,
-      image: req.file ? `uploads/${req.file.filename}` : null,
+      image: imageUrl,
     });
 
     await product.save();
-    res.json(product);
+    res.status(201).json(product);
   } catch (err) {
+    console.error("❌ Create Product Error:", err);
     res.status(400).json({ message: err.message });
   }
 });
@@ -88,7 +104,6 @@ router.get("/", async (req, res) => {
   }
 });
 
-
 // =========================
 // 📌 Update product (Admin)
 // =========================
@@ -104,20 +119,14 @@ router.put("/:id", protect, adminOnly, upload.single("image"), async (req, res) 
     }
 
     if (req.file) {
-      updates.image = `uploads/${req.file.filename}`;
-
-      // ✅ delete old image if exists
-      const existing = await Product.findById(req.params.id);
-      if (existing && existing.image && fs.existsSync(existing.image)) {
-        fs.unlink(existing.image, (err) => {
-          if (err) console.warn("⚠️ Failed to delete old image:", err.message);
-        });
-      }
+      const imageUrl = await uploadToCloudinary(req.file.buffer);
+      updates.image = imageUrl;
     }
 
     const updated = await Product.findByIdAndUpdate(req.params.id, updates, { new: true });
     res.json(updated);
   } catch (err) {
+    console.error("❌ Update Product Error:", err);
     res.status(400).json({ message: err.message });
   }
 });
@@ -127,18 +136,13 @@ router.put("/:id", protect, adminOnly, upload.single("image"), async (req, res) 
 // =========================
 router.delete("/:id", protect, adminOnly, async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
-    if (product && product.image && fs.existsSync(product.image)) {
-      fs.unlink(product.image, (err) => {
-        if (err) console.warn("⚠️ Failed to delete product image:", err.message);
-      });
-    }
-
     await Product.findByIdAndDelete(req.params.id);
-    res.json({ message: "Product deleted" });
+    res.json({ message: "✅ Product deleted" });
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
 });
 
 module.exports = router;
+// =========================
+// =========================

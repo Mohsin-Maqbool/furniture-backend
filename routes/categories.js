@@ -4,20 +4,22 @@ const {
   createCategory,
   updateCategory,
   deleteCategory,
-  getSubcategories,
+  getSubcategories,   // ✅ plural
   addSubcategory,
   updateSubcategory,
   deleteSubcategory,
 } = require("../controllers/categoryController");
 
+const { upload } = require("../utils/cloudinary");
+
 // Categories
 router.get("/", getCategories);
-router.post("/", createCategory);
-router.put("/:id", updateCategory);
+router.post("/", upload.single("image"), createCategory); 
+router.put("/:id", upload.single("image"), updateCategory); 
 router.delete("/:id", deleteCategory);
 
 // Subcategories
-router.get("/:id/subcategories", getSubcategories);
+router.get("/:id/subcategories", getSubcategories);  // ✅ fixed
 router.post("/:id/subcategories", addSubcategory);
 router.put("/subcategories/:id", updateSubcategory);
 router.delete("/subcategories/:id", deleteSubcategory);

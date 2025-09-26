@@ -5,20 +5,22 @@ const categorySchema = new mongoose.Schema(
   {
     name: { type: String, required: true, unique: true, trim: true },
     slug: { type: String, required: true, unique: true },
+    imageUrl: { type: String }, // 👈 Cloudinary image link
   },
   { timestamps: true }
 );
 
-categorySchema.pre("save", function(next) {
+categorySchema.pre("save", function (next) {
   if (this.isModified("name")) {
     this.slug = slugify(this.name, { lower: true, strict: true });
   }
   next();
 });
 
-categorySchema.pre("findOneAndUpdate", function(next) {
+categorySchema.pre("findOneAndUpdate", function (next) {
   const update = this.getUpdate();
-  if (update.name) update.slug = slugify(update.name, { lower: true, strict: true });
+  if (update.name)
+    update.slug = slugify(update.name, { lower: true, strict: true });
   next();
 });
 

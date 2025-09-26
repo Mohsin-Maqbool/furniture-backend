@@ -5,7 +5,12 @@ const subcategorySchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
     slug: { type: String, required: true, unique: true }, // SEO-friendly
-    category: { type: mongoose.Schema.Types.ObjectId, ref: "Category", required: true },
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      required: true,
+    },
+    imageUrl: { type: String, default: null }, // 👈 Cloudinary image URL
   },
   { timestamps: true }
 );
