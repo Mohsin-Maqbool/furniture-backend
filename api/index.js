@@ -1,7 +1,7 @@
 const express = require("express");
-const serverless = require("serverless-http"); // 👈 Uncomment only for Vercel
+const serverless = require("serverless-http"); // 👈 Only needed for Vercel
 require("dotenv").config();
-const connectDB = require("../config/db"); // Make sure db.js is in config folder
+const connectDB = require("../config/db");
 const path = require("path");
 const cors = require("cors");
 const bodyParser = require("body-parser");
@@ -31,7 +31,7 @@ app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // -------------------------
-// Serve uploads (⚠️ Vercel has no local storage)
+// Serve uploads (⚠️ Vercel: not persistent)
 // -------------------------
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
@@ -47,17 +47,22 @@ app.use("/api/cart", require("../routes/cartRoutes"));
 app.use("/api/users", require("../routes/userRoutes"));
 
 // -------------------------
-// Root test route
+// Root route
 // -------------------------
 app.get("/", (req, res) => {
-  res.send("✅ Server is running (local mode)");
+  res.send("✅ Server is running");
 });
 
 // -------------------------
-// Export
+// Export for Vercel / Local
 // -------------------------
-// For local dev
-// module.exports = app;
-
-// For Vercel deployment (later):
-module.exports = serverless(app);
+if (process.env.VERCEL) {
+  // 👉 Vercel automatically sets process.env.VERCEL = "1"
+  module.exports = serverless(app);
+} else {
+  // 👉 Local dev mode
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Local server running at http://localhost:${PORT}`);
+  });
+}
